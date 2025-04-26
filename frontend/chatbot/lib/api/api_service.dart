@@ -2,7 +2,6 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 import 'package:http_parser/http_parser.dart';
-import 'dart:io';
 import 'package:flutter/foundation.dart' show kIsWeb;
 
 class KYCApiService {
@@ -42,8 +41,6 @@ class KYCApiService {
       throw Exception('Error connecting to the server: $e');
     }
   }
-
-
 
   // Updated document upload method that works for both web and mobile
   Future<Map<String, dynamic>> uploadDocument({
@@ -100,6 +97,33 @@ class KYCApiService {
       }
     } catch (e) {
       throw Exception('Error uploading document: $e');
+    }
+  }
+
+  // Method to save chat messages
+  Future<Map<String, dynamic>> saveChatMessage({
+    required int applicationId,
+    required String message,
+    bool isSystemMessage = false,
+  }) async {
+    try {
+      final response = await http.post(
+        Uri.parse('$baseUrl/chat/$applicationId'),
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+        body: {
+          'message': message,
+          'isSystemMessage': isSystemMessage.toString(),
+        },
+      );
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception(
+            'Failed to save chat message: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error saving chat message: $e');
     }
   }
 }
