@@ -1,0 +1,22 @@
+flutter_chatbot
+├── lib
+│   ├── main.dart
+│   ├── models
+│   │   ├── chat_message.dart
+│   │   └── user.dart
+│   ├── screens
+│   │   ├── chat_screen.dart
+│   │   ├── home_screen.dart
+│   │   └── settings_screen.dart
+│   ├── services
+│   │   └── chat_service.dart
+│   ├── utils
+│   │   └── constants.dart
+│   └── widgets
+│       ├── chat_bubble.dart
+│       ├── chat_input.dart
+│       └── message_list.dart
+├── test
+│   └── widget_test.dart
+├── pubspec.yaml
+└── README.md

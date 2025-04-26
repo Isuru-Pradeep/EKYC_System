@@ -1,0 +1,1021 @@
+// import 'package:flutter/material.dart';
+// import 'package:intl/intl.dart';
+// import 'package:file_picker/file_picker.dart';
+// import '../models/chat_message.dart';
+// import 'success_screen.dart';
+// import '../api/api_service.dart';
+
+// class KYCChatScreen extends StatefulWidget {
+//   const KYCChatScreen({super.key});
+
+//   @override
+//   State<KYCChatScreen> createState() => _KYCChatScreenState();
+// }
+
+// class _KYCChatScreenState extends State<KYCChatScreen> {
+//   final List<ChatMessage> _messages = [];
+//   final TextEditingController _textController = TextEditingController();
+//   final ScrollController _scrollController = ScrollController();
+//   int _currentStep = 0;
+//   String? _fullName;
+//   DateTime? _dateOfBirth;
+//   String? _idDocument;
+//   String? _billDocument;
+//   String? _selectedIdType;
+//   String? _nicFront;
+//   String? _nicBack;
+//   String? _address;
+//   String? _phoneNumber;
+//   String? _email;
+//   String? _nicNumber;
+//   final List<String> _idTypes = ['NIC', 'Passport', 'Driving License'];
+//   final KYCApiService _apiService = KYCApiService(); // Add API service
+//   bool _isSubmitting = false;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     _addBotMessage("Welcome to KYC verification! Let's get started.");
+//     _askNextQuestion();
+//   }
+
+//   void _askNextQuestion() {
+//     switch (_currentStep) {
+//       case 0:
+//         _addBotMessage("Please enter your full name:");
+//         break;
+//       case 1:
+//         _addBotMessage("Please enter your email address:");
+//         break;
+//       case 2:
+//         _addBotMessage("Please select your date of birth:");
+//         Future.delayed(const Duration(milliseconds: 500), _showDatePicker);
+//         break;
+//       case 3:
+//         _addBotMessage("Please enter your current residential address:");
+//         break;
+//       case 4:
+//         _addBotMessage("Please enter your phone number:");
+//         break;
+//       case 5:
+//         _addBotMessage("Please enter your NIC number:");
+//         break;
+//       case 6:
+//         _addBotMessage("Please select your ID type:");
+//         Future.delayed(const Duration(milliseconds: 500), _showIdTypeSelector);
+//         break;
+//       case 7:
+//         if (_selectedIdType == 'NIC') {
+//           _addBotMessage("Please submit the front side of your NIC:");
+//         } else {
+//           _addBotMessage("Please submit your ${_selectedIdType} document:");
+//         }
+//         break;
+//       case 8:
+//         if (_selectedIdType == 'NIC') {
+//           _addBotMessage("Please submit the back side of your NIC :");
+//         } else {
+//           _addBotMessage("Please submit your bill documentation :");
+//         }
+//         break;
+//       case 9:
+//         if (_selectedIdType == 'NIC') {
+//           _addBotMessage("Please submit your bill documentation :");
+//         } else {
+//           _showSummary();
+//         }
+//         break;
+//       case 10:
+//         if (_selectedIdType == 'NIC') {
+//           _showSummary();
+//         }
+//         break;
+//     }
+//   }
+
+//   void _showIdTypeSelector() {
+//     showDialog(
+//       context: context,
+//       builder: (BuildContext context) {
+//         return AlertDialog(
+//           title: const Text('Select ID Type'),
+//           content: Column(
+//             mainAxisSize: MainAxisSize.min,
+//             children: _idTypes.map((type) {
+//               return ListTile(
+//                 title: Text(type),
+//                 onTap: () {
+//                   setState(() {
+//                     _selectedIdType = type;
+//                     _messages.add(ChatMessage(
+//                       text: "Selected ID Type: $type",
+//                       isUser: true,
+//                     ));
+//                   });
+//                   Navigator.pop(context);
+//                   _currentStep++;
+//                   Future.delayed(const Duration(milliseconds: 500), _askNextQuestion);
+//                 },
+//               );
+//             }).toList(),
+//           ),
+//         );
+//       },
+//     );
+//   }
+
+//   void _showSummary() {
+//     _addBotMessage('''
+// Thank you! Here's your KYC information summary:
+// - Full Name: ${_fullName ?? 'Not provided'}
+// - Email: ${_email ?? 'Not provided'}
+// - Date of Birth: ${_dateOfBirth != null ? DateFormat('dd/MM/yyyy').format(_dateOfBirth!) : 'Not provided'}
+// - Address: ${_address ?? 'Not provided'}
+// - Phone Number: ${_phoneNumber ?? 'Not provided'}
+// - NIC Number: ${_nicNumber ?? 'Not provided'}
+// - ID Type: ${_selectedIdType ?? 'Not provided'}
+// ${_selectedIdType == 'NIC' ? '''- NIC Front: ${_nicFront ?? 'Not provided'}
+// - NIC Back: ${_nicBack ?? 'Not provided'}''' : '''- ${_selectedIdType} Document: ${_idDocument ?? 'Not provided'}'''}
+// - Bill Document: ${_billDocument ?? 'Not provided'}
+
+// Is this information correct? Type 'yes' to confirm or 'no' to restart.''');
+//   }
+
+//   void _addBotMessage(String text) {
+//     setState(() {
+//       _messages.add(ChatMessage(text: text, isUser: false));
+//     });
+//     _scrollToBottom();
+//   }
+
+//   void _scrollToBottom() {
+//     Future.delayed(const Duration(milliseconds: 100), () {
+//       _scrollController.animateTo(
+//         _scrollController.position.maxScrollExtent,
+//         duration: const Duration(milliseconds: 300),
+//         curve: Curves.easeOut,
+//       );
+//     });
+//   }
+
+//   void _handleSubmitted(String text) {
+//     if (text.isEmpty) return;
+
+//     _textController.clear();
+//     setState(() {
+//       _messages.add(ChatMessage(text: text, isUser: true));
+//     });
+//     _scrollToBottom();
+
+//     switch (_currentStep) {
+//       case 0:
+//         _fullName = text;
+//         _currentStep++;
+//         break;
+//       case 1:
+//         if (_isValidEmail(text)) {
+//           _email = text;
+//           _currentStep++;
+//         } else {
+//           _addBotMessage("Please enter a valid email address.");
+//           return;
+//         }
+//         break;
+//       case 3:
+//         _address = text;
+//         _currentStep++;
+//         break;
+//       case 4:
+//         if (_isValidPhoneNumber(text)) {
+//           _phoneNumber = text;
+//           _currentStep++;
+//         } else {
+//           _addBotMessage("Please enter a valid phone number (10-12 digits).");
+//           return;
+//         }
+//         break;
+//       case 5:
+//         if (_isValidNICNumber(text)) {
+//           _nicNumber = text;
+//           _currentStep++;
+//         } else {
+//           _addBotMessage("Please enter a valid NIC number.");
+//           return;
+//         }
+//         break;
+//     }
+
+//     Future.delayed(const Duration(milliseconds: 500), _askNextQuestion);
+//   }
+
+//   // Add phone number validation
+//   bool _isValidPhoneNumber(String phone) {
+//     // This regex matches numbers with optional '+' prefix and 10-12 digits
+//     return RegExp(r'^\+?[0-9]{10,12}$').hasMatch(phone);
+//   }
+
+//   bool _isValidNICNumber(String nic) {
+//   return RegExp(r'^([0-9]{9}[vVxX]|[0-9]{12})$').hasMatch(nic);
+// }
+
+//   bool _isValidEmail(String email) {
+//   return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+// }
+
+//   void _showDatePicker() async {
+//     final DateTime? picked = await showDatePicker(
+//       context: context,
+//       initialDate: DateTime(2000),  // Default to year 2000
+//       firstDate: DateTime(1900),    // Allowing dates from 1900
+//       lastDate: DateTime.now(),     // Up to current date
+//       builder: (context, child) {
+//         return Theme(
+//           data: Theme.of(context).copyWith(
+//             colorScheme: ColorScheme.light(
+//               primary: Colors.blue, // Header background color
+//               onPrimary: Colors.white, // Header text color
+//               onSurface: Colors.black, // Calendar text color
+//             ),
+//             textButtonTheme: TextButtonThemeData(
+//               style: TextButton.styleFrom(
+//                 foregroundColor: Colors.blue, // Button text color
+//               ),
+//             ),
+//           ),
+//           child: child!,
+//         );
+//       },
+//     );
+
+//     if (picked != null) {
+//       setState(() {
+//         _dateOfBirth = picked;
+//         _messages.add(ChatMessage(
+//           text: "Selected DOB: ${DateFormat('dd MMMM yyyy').format(picked)}",
+//           isUser: true,
+//         ));
+//       });
+//       _currentStep++;
+//       Future.delayed(const Duration(milliseconds: 500), _askNextQuestion);
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text('KYC Assistant'),
+//       ),
+//       body: Column(
+//         children: [
+//           Expanded(
+//             child: ListView.builder(
+//               controller: _scrollController,
+//               padding: const EdgeInsets.all(8.0),
+//               itemCount: _messages.length,
+//               itemBuilder: (context, index) {
+//                 final message = _messages[index];
+//                 return _buildMessage(message);
+//               },
+//             ),
+//           ),
+//           _buildMessageComposer(),
+//         ],
+//       ),
+//     );
+//   }
+
+//   Widget _buildMessage(ChatMessage message) {
+//     return Container(
+//       margin: EdgeInsets.only(
+//         top: 8,
+//         bottom: 8,
+//         left: message.isUser ? 64 : 8,
+//         right: message.isUser ? 8 : 64,
+//       ),
+//       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+//       child: Container(
+//         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+//         decoration: BoxDecoration(
+//           color: message.isUser ? Colors.blue : Colors.grey[200],
+//           borderRadius: BorderRadius.circular(20),
+//         ),
+//         child: Text(
+//           message.text,
+//           style: TextStyle(
+//             color: message.isUser ? Colors.white : Colors.black87,
+//           ),
+//         ),
+//       ),
+//     );
+//   }
+// Widget _buildMessageComposer() {
+//   // Check if all required fields are filled
+//   bool canSubmit = _fullName != null &&
+//                   _dateOfBirth != null &&
+//                   _address != null &&
+//                   _phoneNumber != null &&
+//                   _selectedIdType != null &&
+//                   _billDocument != null &&
+//                   (_selectedIdType == 'NIC' ?
+//                     (_nicFront != null && _nicBack != null) :
+//                     _idDocument != null);
+
+//   return Container(
+//     padding: const EdgeInsets.all(8.0),
+//     decoration: BoxDecoration(
+//       color: Theme.of(context).cardColor,
+//       border: Border(top: BorderSide(color: Colors.grey[200]!)),
+//     ),
+//     child: Column(
+//       mainAxisSize: MainAxisSize.min,
+//       children: [
+//         if (_billDocument != null) // Only show button after bill is uploaded
+//           Padding(
+//             padding: const EdgeInsets.only(bottom: 8.0),
+//             child: ElevatedButton(
+//               style: ElevatedButton.styleFrom(
+//                 backgroundColor: Colors.green,
+//                 minimumSize: const Size(double.infinity, 45),
+//                 // Disable button if not all details are provided or currently submitting
+//                 disabledBackgroundColor: Colors.grey,
+//               ),
+//               onPressed: (canSubmit && !_isSubmitting) ? _submitKYCInformation : null,
+//               child: _isSubmitting
+//                 ? const Row(
+//                     mainAxisAlignment: MainAxisAlignment.center,
+//                     children: [
+//                       SizedBox(
+//                         width: 16,
+//                         height: 16,
+//                         child: CircularProgressIndicator(
+//                           color: Colors.white,
+//                           strokeWidth: 2,
+//                         ),
+//                       ),
+//                       SizedBox(width: 10),
+//                       Text("Submitting...", style: TextStyle(color: Colors.white)),
+//                     ],
+//                   )
+//                 : Text(
+//                     canSubmit ? 'Submit KYC Information' : 'Complete All Details First',
+//                     style: TextStyle(
+//                       fontSize: 16,
+//                       color: canSubmit ? Colors.white : Colors.white70,
+//                     ),
+//                   ),
+//             ),
+//           ),
+//         Row(
+//           children: [
+//             IconButton(
+//               icon: const Icon(Icons.attach_file),
+//               onPressed: _pickFile,
+//             ),
+//             Expanded(
+//               child: TextField(
+//                 controller: _textController,
+//                 onSubmitted: _handleSubmitted,
+//                 decoration: const InputDecoration.collapsed(
+//                   hintText: 'Send a message',
+//                 ),
+//               ),
+//             ),
+//             IconButton(
+//               icon: const Icon(Icons.send),
+//               onPressed: () => _handleSubmitted(_textController.text),
+//             ),
+//           ],
+//         ),
+//       ],
+//     ),
+//   );
+// }
+//   // fill picking
+//   Future<void> _pickFile() async {
+//   try {
+//     FilePickerResult? result = await FilePicker.platform.pickFiles(
+//       type: FileType.custom,
+//       allowedExtensions: ['pdf'],
+//     );
+
+//     if (result != null) {
+//       String fileName = result.files.single.name;
+//       setState(() {
+//         if (_currentStep == 7) {  // Step for NIC front
+//           if (_selectedIdType == 'NIC') {
+//             _nicFront = fileName;
+//             _messages.add(ChatMessage(
+//               text: "NIC Front uploaded: $fileName",
+//               isUser: true,
+//             ));
+//           } else {
+//             _idDocument = fileName;
+//             _messages.add(ChatMessage(
+//               text: "${_selectedIdType} Document uploaded: $fileName",
+//               isUser: true,
+//             ));
+//           }
+//         } else if (_currentStep == 8) {  // Step for NIC back
+//           if (_selectedIdType == 'NIC') {
+//             _nicBack = fileName;
+//             _messages.add(ChatMessage(
+//               text: "NIC Back uploaded: $fileName",
+//               isUser: true,
+//             ));
+//           } else {
+//             _billDocument = fileName;
+//             _messages.add(ChatMessage(
+//               text: "Bill Document uploaded: $fileName",
+//               isUser: true,
+//             ));
+//           }
+//         } else if (_currentStep == 9) {  // Step for bill document (NIC only)
+//           _billDocument = fileName;
+//           _messages.add(ChatMessage(
+//             text: "Bill Document uploaded: $fileName",
+//             isUser: true,
+//           ));
+//         }
+
+//         _currentStep++;
+//         Future.delayed(const Duration(milliseconds: 500), _askNextQuestion);
+//       });
+//     }
+//   } catch (e) {
+//     _addBotMessage("Error uploading file. Please try again.");
+//   }
+// }
+
+// Future<void> _submitKYCInformation() async {
+//   String documentInfo = _selectedIdType == 'NIC'
+//     ? '''- NIC Front: ${_nicFront}
+// - NIC Back: ${_nicBack}'''
+//     : '''- ${_selectedIdType} Document: ${_idDocument}''';
+
+//   _addBotMessage('''
+// Your KYC information is ready to be submitted:
+// - Full Name: $_fullName
+// - Date of Birth: ${DateFormat('dd/MM/yyyy').format(_dateOfBirth!)}
+// - Address: $_address
+// - Phone Number: $_phoneNumber
+// - NIC Number: ${_nicNumber ?? 'Not provided'}
+// - ID Type: $_selectedIdType
+// $documentInfo
+// - Bill Document: $_billDocument
+
+// Processing your submission...''');
+
+//   setState(() {
+//     _isSubmitting = true;
+//   });
+
+//   try {
+//     final response = await _apiService.submitKYCApplication(
+//       fullName: _fullName!,
+//       phoneNumber: _phoneNumber!,
+//       dob: _dateOfBirth!,
+//       address: _address!,
+//       idType: _selectedIdType!,
+//       idNumber: _nicNumber!,
+//       email: _email,
+//     );
+
+//     _addBotMessage("KYC application submitted successfully! Application ID: ${response['id']}");
+
+//     Future.delayed(const Duration(seconds: 2), () {
+//       Navigator.push(
+//         context,
+//         MaterialPageRoute(
+//           builder: (context) => SuccessScreen(applicationId: response['id'].toString()),
+//         ),
+//       );
+//     });
+//   } catch (e) {
+//     _addBotMessage("Error submitting KYC application: ${e.toString().replaceAll('Exception: ', '')}");
+//   } finally {
+//     setState(() {
+//       _isSubmitting = false;
+//     });
+//   }
+// }
+// }
+
+import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
+import 'package:file_picker/file_picker.dart';
+import '../models/chat_message.dart';
+import 'success_screen.dart';
+import '../api/api_service.dart';
+
+class KYCChatScreen extends StatefulWidget {
+  const KYCChatScreen({super.key});
+
+  @override
+  State<KYCChatScreen> createState() => _KYCChatScreenState();
+}
+
+class _KYCChatScreenState extends State<KYCChatScreen> {
+  final List<ChatMessage> _messages = [];
+  final TextEditingController _textController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
+  int _currentStep = 0;
+  String? _fullName;
+  DateTime? _dateOfBirth;
+  String? _idDocument;
+  String? _billDocument;
+  String? _selectedIdType;
+  String? _nicFront;
+  String? _nicBack;
+  String? _address;
+  String? _phoneNumber;
+  String? _email;
+  String? _nicNumber;
+  final List<String> _idTypes = ['NIC', 'Passport', 'Driving License'];
+  final KYCApiService _apiService = KYCApiService();
+  bool _isSubmitting = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _addBotMessage("Welcome to KYC verification! Let's get started.");
+    _askNextQuestion();
+  }
+
+  void _askNextQuestion() {
+    switch (_currentStep) {
+      case 0:
+        _addBotMessage("Please enter your full name:");
+        break;
+      case 1:
+        _addBotMessage("Please enter your email address:");
+        break;
+      case 2:
+        _addBotMessage("Please select your date of birth:");
+        Future.delayed(const Duration(milliseconds: 500), _showDatePicker);
+        break;
+      case 3:
+        _addBotMessage("Please enter your current residential address:");
+        break;
+      case 4:
+        _addBotMessage("Please enter your phone number:");
+        break;
+      case 5:
+        _addBotMessage("Please enter your NIC number:");
+        break;
+      case 6:
+        _addBotMessage("Please select your ID type:");
+        Future.delayed(const Duration(milliseconds: 500), _showIdTypeSelector);
+        break;
+      case 7:
+        if (_selectedIdType == 'NIC') {
+          _addBotMessage("Please submit the front side of your NIC:");
+        } else {
+          _addBotMessage("Please submit your ${_selectedIdType} document:");
+        }
+        break;
+      case 8:
+        if (_selectedIdType == 'NIC') {
+          _addBotMessage("Please submit the back side of your NIC :");
+        } else {
+          _addBotMessage("Please submit your bill documentation :");
+        }
+        break;
+      case 9:
+        if (_selectedIdType == 'NIC') {
+          _addBotMessage("Please submit your bill documentation :");
+        } else {
+          _showSummary();
+        }
+        break;
+      case 10:
+        if (_selectedIdType == 'NIC') {
+          _showSummary();
+        }
+        break;
+    }
+  }
+
+  void _showIdTypeSelector() {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Select ID Type'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: _idTypes.map((type) {
+              return ListTile(
+                title: Text(type),
+                onTap: () {
+                  setState(() {
+                    _selectedIdType = type;
+                    _messages.add(ChatMessage(
+                      text: "Selected ID Type: $type",
+                      isUser: true,
+                    ));
+                  });
+                  Navigator.pop(context);
+                  _currentStep++;
+                  Future.delayed(
+                      const Duration(milliseconds: 500), _askNextQuestion);
+                },
+              );
+            }).toList(),
+          ),
+        );
+      },
+    );
+  }
+
+  void _showSummary() {
+    _addBotMessage('''
+Thank you! Here's your KYC information summary:
+- Full Name: ${_fullName ?? 'Not provided'}
+- Email: ${_email ?? 'Not provided'}
+- Date of Birth: ${_dateOfBirth != null ? DateFormat('dd/MM/yyyy').format(_dateOfBirth!) : 'Not provided'}
+- Address: ${_address ?? 'Not provided'}
+- Phone Number: ${_phoneNumber ?? 'Not provided'}
+- NIC Number: ${_nicNumber ?? 'Not provided'}
+- ID Type: ${_selectedIdType ?? 'Not provided'}
+${_selectedIdType == 'NIC' ? '''- NIC Front: ${_nicFront ?? 'Not provided'}
+- NIC Back: ${_nicBack ?? 'Not provided'}''' : '''- ${_selectedIdType} Document: ${_idDocument ?? 'Not provided'}'''}
+- Bill Document: ${_billDocument ?? 'Not provided'}
+
+Is this information correct? Type 'yes' to confirm or 'no' to restart.''');
+  }
+
+  void _addBotMessage(String text) {
+    setState(() {
+      _messages.add(ChatMessage(text: text, isUser: false));
+    });
+    _scrollToBottom();
+  }
+
+  void _scrollToBottom() {
+    Future.delayed(const Duration(milliseconds: 100), () {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  void _handleSubmitted(String text) {
+    if (text.isEmpty) return;
+
+    _textController.clear();
+    setState(() {
+      _messages.add(ChatMessage(text: text, isUser: true));
+    });
+    _scrollToBottom();
+
+    switch (_currentStep) {
+      case 0:
+        _fullName = text;
+        _currentStep++;
+        break;
+      case 1:
+        if (_isValidEmail(text)) {
+          _email = text;
+          _currentStep++;
+        } else {
+          _addBotMessage("Please enter a valid email address.");
+          return;
+        }
+        break;
+      case 3:
+        _address = text;
+        _currentStep++;
+        break;
+      case 4:
+        if (_isValidPhoneNumber(text)) {
+          _phoneNumber = text;
+          _currentStep++;
+        } else {
+          _addBotMessage("Please enter a valid phone number (10-12 digits).");
+          return;
+        }
+        break;
+      case 5:
+        if (_isValidNICNumber(text)) {
+          _nicNumber = text;
+          _currentStep++;
+        } else {
+          _addBotMessage("Please enter a valid NIC number.");
+          return;
+        }
+        break;
+    }
+
+    Future.delayed(const Duration(milliseconds: 500), _askNextQuestion);
+  }
+
+  // Add phone number validation
+  bool _isValidPhoneNumber(String phone) {
+    // This regex matches numbers with optional '+' prefix and 10-12 digits
+    return RegExp(r'^\+?[0-9]{10,12}$').hasMatch(phone);
+  }
+
+  bool _isValidNICNumber(String nic) {
+    return RegExp(r'^([0-9]{9}[vVxX]|[0-9]{12})$').hasMatch(nic);
+  }
+
+  bool _isValidEmail(String email) {
+    return RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(email);
+  }
+
+  void _showDatePicker() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime(2000), // Default to year 2000
+      firstDate: DateTime(1900), // Allowing dates from 1900
+      lastDate: DateTime.now(), // Up to current date
+      builder: (context, child) {
+        return Theme(
+          data: Theme.of(context).copyWith(
+            colorScheme: ColorScheme.light(
+              primary: Colors.blue, // Header background color
+              onPrimary: Colors.white, // Header text color
+              onSurface: Colors.black, // Calendar text color
+            ),
+            textButtonTheme: TextButtonThemeData(
+              style: TextButton.styleFrom(
+                foregroundColor: Colors.blue, // Button text color
+              ),
+            ),
+          ),
+          child: child!,
+        );
+      },
+    );
+
+    if (picked != null) {
+      setState(() {
+        _dateOfBirth = picked;
+        _messages.add(ChatMessage(
+          text: "Selected DOB: ${DateFormat('dd MMMM yyyy').format(picked)}",
+          isUser: true,
+        ));
+      });
+      _currentStep++;
+      Future.delayed(const Duration(milliseconds: 500), _askNextQuestion);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('KYC Assistant'),
+      ),
+      body: Column(
+        children: [
+          Expanded(
+            child: ListView.builder(
+              controller: _scrollController,
+              padding: const EdgeInsets.all(8.0),
+              itemCount: _messages.length,
+              itemBuilder: (context, index) {
+                final message = _messages[index];
+                return _buildMessage(message);
+              },
+            ),
+          ),
+          _buildMessageComposer(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessage(ChatMessage message) {
+    return Container(
+      margin: EdgeInsets.only(
+        top: 8,
+        bottom: 8,
+        left: message.isUser ? 64 : 8,
+        right: message.isUser ? 8 : 64,
+      ),
+      alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+        decoration: BoxDecoration(
+          color: message.isUser ? Colors.blue : Colors.grey[200],
+          borderRadius: BorderRadius.circular(20),
+        ),
+        child: Text(
+          message.text,
+          style: TextStyle(
+            color: message.isUser ? Colors.white : Colors.black87,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessageComposer() {
+    // Check if all required fields are filled
+    bool canSubmit = _fullName != null &&
+        _dateOfBirth != null &&
+        _address != null &&
+        _phoneNumber != null &&
+        _selectedIdType != null &&
+        _billDocument != null &&
+        (_selectedIdType == 'NIC'
+            ? (_nicFront != null && _nicBack != null)
+            : _idDocument != null);
+
+    return Container(
+      padding: const EdgeInsets.all(8.0),
+      decoration: BoxDecoration(
+        color: Theme.of(context).cardColor,
+        border: Border(top: BorderSide(color: Colors.grey[200]!)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_billDocument != null) // Only show button after bill is uploaded
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  minimumSize: const Size(double.infinity, 45),
+                  // Disable button if not all details are provided or currently submitting
+                  disabledBackgroundColor: Colors.grey,
+                ),
+                onPressed: (canSubmit && !_isSubmitting)
+                    ? _submitKYCInformation
+                    : null,
+                child: _isSubmitting
+                    ? const Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
+                            ),
+                          ),
+                          SizedBox(width: 10),
+                          Text("Submitting...",
+                              style: TextStyle(color: Colors.white)),
+                        ],
+                      )
+                    : Text(
+                        canSubmit
+                            ? 'Submit KYC Information'
+                            : 'Complete All Details First',
+                        style: TextStyle(
+                          fontSize: 16,
+                          color: canSubmit ? Colors.white : Colors.white70,
+                        ),
+                      ),
+              ),
+            ),
+          Row(
+            children: [
+              IconButton(
+                icon: const Icon(Icons.attach_file),
+                onPressed: _pickFile,
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _textController,
+                  onSubmitted: _handleSubmitted,
+                  decoration: const InputDecoration.collapsed(
+                    hintText: 'Send a message',
+                  ),
+                ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: () => _handleSubmitted(_textController.text),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // File picking
+  Future<void> _pickFile() async {
+    try {
+      FilePickerResult? result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf'],
+      );
+
+      if (result != null) {
+        String fileName = result.files.single.name;
+        setState(() {
+          if (_currentStep == 7) {
+            // Step for NIC front
+            if (_selectedIdType == 'NIC') {
+              _nicFront = fileName;
+              _messages.add(ChatMessage(
+                text: "NIC Front uploaded: $fileName",
+                isUser: true,
+              ));
+            } else {
+              _idDocument = fileName;
+              _messages.add(ChatMessage(
+                text: "${_selectedIdType} Document uploaded: $fileName",
+                isUser: true,
+              ));
+            }
+          } else if (_currentStep == 8) {
+            // Step for NIC back
+            if (_selectedIdType == 'NIC') {
+              _nicBack = fileName;
+              _messages.add(ChatMessage(
+                text: "NIC Back uploaded: $fileName",
+                isUser: true,
+              ));
+            } else {
+              _billDocument = fileName;
+              _messages.add(ChatMessage(
+                text: "Bill Document uploaded: $fileName",
+                isUser: true,
+              ));
+            }
+          } else if (_currentStep == 9) {
+            // Step for bill document (NIC only)
+            _billDocument = fileName;
+            _messages.add(ChatMessage(
+              text: "Bill Document uploaded: $fileName",
+              isUser: true,
+            ));
+          }
+
+          _currentStep++;
+          Future.delayed(const Duration(milliseconds: 500), _askNextQuestion);
+        });
+      }
+    } catch (e) {
+      _addBotMessage("Error uploading file. Please try again.");
+    }
+  }
+
+  Future<void> _submitKYCInformation() async {
+    String documentInfo = _selectedIdType == 'NIC'
+        ? '''- NIC Front: ${_nicFront}
+- NIC Back: ${_nicBack}'''
+        : '''- ${_selectedIdType} Document: ${_idDocument}''';
+
+    _addBotMessage('''
+Your KYC information is ready to be submitted:
+- Full Name: $_fullName
+- Date of Birth: ${DateFormat('dd/MM/yyyy').format(_dateOfBirth!)}
+- Address: $_address
+- Phone Number: $_phoneNumber
+- NIC Number: ${_nicNumber ?? 'Not provided'}
+- ID Type: $_selectedIdType
+$documentInfo
+- Bill Document: $_billDocument
+
+Processing your submission...''');
+
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      final response = await _apiService.submitKYCApplication(
+        fullName: _fullName!,
+        phoneNumber: _phoneNumber!,
+        dob: _dateOfBirth!,
+        address: _address!,
+        idType: _selectedIdType!,
+        idNumber: _nicNumber!,
+        email: _email,
+      );
+
+      _addBotMessage(
+          "KYC application submitted successfully! Application ID: ${response['id']}");
+
+      Future.delayed(const Duration(seconds: 2), () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) =>
+                SuccessScreen(applicationId: response['id'].toString()),
+          ),
+        );
+      });
+    } catch (e) {
+      _addBotMessage(
+          "Error submitting KYC application: ${e.toString().replaceAll('Exception: ', '')}");
+    } finally {
+      setState(() {
+        _isSubmitting = false;
+      });
+    }
+  }
+}
