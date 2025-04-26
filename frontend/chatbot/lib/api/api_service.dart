@@ -1,5 +1,9 @@
 import 'dart:convert';
+import 'dart:typed_data';
 import 'package:http/http.dart' as http;
+import 'package:http_parser/http_parser.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 class KYCApiService {
   final String baseUrl = 'http://localhost:8080/api';
@@ -36,6 +40,66 @@ class KYCApiService {
       }
     } catch (e) {
       throw Exception('Error connecting to the server: $e');
+    }
+  }
+
+
+
+  // Updated document upload method that works for both web and mobile
+  Future<Map<String, dynamic>> uploadDocument({
+    required int applicationId,
+    String? filePath, // For mobile
+    Uint8List? fileBytes, // For web
+    required String fileName,
+    required String documentType,
+    String? specialNote,
+  }) async {
+    try {
+      var request = http.MultipartRequest(
+        'POST',
+        Uri.parse('$baseUrl/documents/$applicationId'),
+      );
+
+      // Add file - handle both web and mobile paths
+      if (kIsWeb && fileBytes != null) {
+        // For web, use bytes
+        var multipartFile = http.MultipartFile.fromBytes(
+          'file',
+          fileBytes,
+          filename: fileName,
+          contentType: MediaType('application', 'pdf'),
+        );
+        request.files.add(multipartFile);
+      } else if (!kIsWeb && filePath != null) {
+        // For mobile, use file path
+        var file = await http.MultipartFile.fromPath(
+          'file',
+          filePath,
+          contentType: MediaType('application', 'pdf'),
+        );
+        request.files.add(file);
+      } else {
+        throw Exception('No valid file data provided');
+      }
+
+      // Add text fields
+      request.fields['documentType'] = documentType;
+      if (specialNote != null) {
+        request.fields['specialNote'] = specialNote;
+      }
+
+      // Send request
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        return jsonDecode(response.body);
+      } else {
+        throw Exception(
+            'Failed to upload document: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      throw Exception('Error uploading document: $e');
     }
   }
 }
