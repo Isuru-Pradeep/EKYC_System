@@ -2,12 +2,16 @@ package com.paymedia.kyc_application_new_approch.entity;
 
 import jakarta.persistence.*;
 import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "documents")
 @Data
+@Setter
+@Getter
 public class Document {
 
     @Id
@@ -23,7 +27,7 @@ public class Document {
 
     private String documentType;
 
-    private String speacialNote;
+    private String specialNote;
 
     private LocalDateTime createdAt = LocalDateTime.now();
 }
