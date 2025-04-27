@@ -30,6 +30,34 @@ public class DocumentService {
 
     @Transactional
     public DocumentDTO uploadDocument(Long applicationId, MultipartFile file, String documentType, String specialNote) throws IOException {
+        // ======== Validations ========
+        if (applicationId == null) {
+            throw new IllegalArgumentException("Application ID must not be null.");
+        }
+
+        if (file == null || file.isEmpty()) {
+            throw new IllegalArgumentException("Uploaded file must not be empty.");
+        }
+
+        if (file.getSize() > 10 * 1024 * 1024) { // 10MB limit
+            throw new IllegalArgumentException("File size must not exceed 10MB.");
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null ||
+                !(
+//                        contentType.equals("application/pdf") ||
+                        contentType.equals("image/jpeg") ||
+                        contentType.equals("image/jpg") ||
+                        contentType.equals("image/png"))) {
+            throw new IllegalArgumentException("Only JPG, JPEG, or PNG files are allowed.");
+        }
+
+        if (documentType == null || documentType.trim().isEmpty()) {
+            throw new IllegalArgumentException("Document type must not be blank.");
+        }
+        // =====================================
+
         if (!Files.exists(rootLocation)) {
             Files.createDirectories(rootLocation);
         }
